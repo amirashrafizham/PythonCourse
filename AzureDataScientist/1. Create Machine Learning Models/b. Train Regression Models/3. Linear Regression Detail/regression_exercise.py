@@ -1,6 +1,7 @@
 from cProfile import label
 from random import random
 from statistics import mode
+from unittest import result
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,6 +9,12 @@ from sklearn.cluster import MeanShift
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import joblib
 
 
 # Function to sublot scatterplot of Features vs Label
@@ -89,7 +96,7 @@ def categorical_label():
 
 X, y = bike[['season', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit',
              'temp', 'atemp', 'hum', 'windspeed']].values, bike['rentals'].values
-print('Features:', X[:10], '\nLabels:', y[:10], sep='\n')
+#print('Features:', X[:10], '\nLabels:', y[:10], sep='\n')
 
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -101,8 +108,8 @@ print('Training Set: %d rows\nTest Set: %d rows' %
 model = LinearRegression().fit(X_train, y_train)
 
 predictions = model.predict(X_test)
-print(f"Predicted labels: {np.round(predictions)[:10]}")
-print(f"Actual labels: {y_test[:10]}")
+#print(f"Predicted labels: {np.round(predictions)[:10]}")
+#print(f"Actual labels: {y_test[:10]}")
 
 mse = mean_squared_error(y_test, predictions)
 rmse = np.sqrt(mse)
@@ -110,5 +117,62 @@ r2 = r2_score(y_test, predictions)
 
 
 # Cheking the accuracy of the model
-print("RMSE: ", rmse)
-print("R2: ", r2)
+print(f"Linear Regression Accuracy:\nRMSE: {rmse:.2f}\nR2: {r2:.2f}\n")
+
+# Using a Different Algorithm
+model = GradientBoostingRegressor().fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+mse = mean_squared_error(y_test, predictions)
+rmse = np.sqrt(mse)
+r2 = r2_score(y_test, predictions)
+
+print(f"Gradient Boosting Accuracy:\nRMSE: {rmse:.2f}\nR2: {r2:.2f}\n")
+
+# Export model into a Pickle file
+filename = './bike-share.pkl'
+joblib.dump(model, filename)
+
+
+# Importing the Pickle file as a model
+loaded_model = joblib.load(filename)
+
+# Testing the prediction using a sample numpy array
+X_new = np.array([[1, 1, 0, 3, 1, 1, 0.226957, 0.22927,
+                 0.436957, 0.1869]]).astype('float64')
+result = loaded_model.predict(X_new)
+print(result)
+
+
+# Improve performance by preprocessing Numeric and Categorical Features with Pipelines
+
+# Define preprocessing for numeric columns (scale them)
+numeric_features = [6, 7, 8, 9]
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())])
+
+# Define preprocessing for categorical features (encode them)
+categorical_features = [0, 1, 2, 3, 4, 5]
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+
+# Combine preprocessing steps
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)])
+
+# Create preprocessing and training pipeline
+pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                           ('regressor', GradientBoostingRegressor())])
+
+# Fite the pipeline to train a linear Rgression model on the Training Set
+model = pipeline.fit(X_train, (y_train))
+
+predictions = model.predict(X_test)
+mse = mean_squared_error(y_test, predictions)
+rmse = np.sqrt(mse)
+r2 = r2_score(y_test, predictions)
+
+print(
+    f"Gradient Boosting Accuracy with Pipelines preprocessing:\nRMSE: {rmse:.2f}\nR2: {r2:.2f}\n")
