@@ -58,8 +58,8 @@ def numeric_label_alternative():
     for col in numeric_features:
         fig = plt.figure(figsize=(9, 6))
         ax = fig.gca()
-        feature = bike_data[col]
-        label = bike_data['rentals']
+        feature = bike[col]
+        label = bike['rentals']
         correlation = feature.corr(label)
         plt.scatter(x=feature, y=label)
         plt.xlabel(col)
