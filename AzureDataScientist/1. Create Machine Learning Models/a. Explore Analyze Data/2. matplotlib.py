@@ -21,3 +21,5 @@ plt.bar(x=passes['Name'], height=passes['Grade'])
 plt.title("Students vs Grade chart")
 plt.xlabel("Student's Name")
 plt.ylabel("Grade")
+
+plt.show()
