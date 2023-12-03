@@ -1,38 +1,48 @@
-from typing import Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
+from config import engine
+from config import SessionLocal
+from sqlalchemy.orm import Session
+from schemas import RequestBook
+import crud
+import models
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-"""
-STATIC ROUTING (ENDPOINTS WITHOUT ID). YOU HAVE TO PUT THESE ROUTING BEFORE DYNAMIC ONES,
-ELSE IT WILL RETURN AN ERROR
-"""
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
-@app.get('/blog')
-def index(limit: int, published: bool, sort: Optional[str] = None):
-    if published:
-        return {'data': f'{limit} published blogs queried'}
-    else:
-        return {'data': f'{limit} blogs queried'}
+@app.post("/create")
+async def create_book_service(request: RequestBook, db: Session = Depends(get_db)):
+    crud.create_book(db, book=request.parameter)
+    return HTTPException(status_code=201, detail="Book created successfully")
 
 
-@app.get('/blog/unpublished')
-def unpublished():
-    return {'data': 'unpublished blog list'}
+@app.get("/")
+async def get_books(db: Session = Depends(get_db)):
+    _books = crud.get_book(db)
+    return _books
 
 
-"""
-DYNAMIC ROUTING (ENDPOINTS WITH ID). YOU HAVE TO PUT THESE ROUTING BEFORE DYNAMIC ONES,
-ELSE IT WILL RETURN AN ERROR
-"""
+@app.patch("/update")
+async def update_book(request: RequestBook, db: Session = Depends(get_db)):
+    _book = crud.update_book(
+        db,
+        book_id=request.parameter.id,
+        title=request.parameter.title,
+        description=request.parameter.description,
+    )
+    return _book
 
 
-@app.get('/blog/{id}')
-def about(id: int):
-    return {'data': id}
-
-
-@app.get('/blog/{id}/commments')
-def comments(id: int, limit: int = 10):
-    return {'data': f'{10} comments for id:{id}'}
+@app.delete("/delete")
+async def delete_book(request: RequestBook, db: Session = Depends(get_db)):
+    crud.remove_book(db, book_id=request.parameter.id)
+    return HTTPException(status_code=200, detail="Book deleted successfully")
